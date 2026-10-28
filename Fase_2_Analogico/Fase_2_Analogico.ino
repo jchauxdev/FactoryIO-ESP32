@@ -42,10 +42,12 @@ void setup() {
   mb.server();
 
   // Inicializar los 4 tipos de registros en la tabla Modbus del ESP32
-  mb.addCoil(COIL_SENSOR_DIGITAL, false);
-  mb.addIsts(ISTS_ACTUADOR_DIG, false);
-  mb.addHreg(HREG_SENSOR_ANALOG, 0); // Recibirá 0 - 1000 desde Factory IO (Scale = 100)
-  mb.addIreg(IREG_POT_ESP32, 0);     // Enviará 0 - 1000 hacia Factory IO (Scale = 100)
+  // Factory IO escribe/lee todos sus puntos en una sola petición: hay que definirlos todos
+  // (16 digitales y 8 registros, el Count por defecto del driver), o el ESP32 rechaza la escritura.
+  mb.addCoil(COIL_SENSOR_DIGITAL, false, 16);
+  mb.addIsts(ISTS_ACTUADOR_DIG, false, 16);
+  mb.addHreg(HREG_SENSOR_ANALOG, 0, 8); // Recibirá 0 - 1000 desde Factory IO (Scale = 100)
+  mb.addIreg(IREG_POT_ESP32, 0, 8);     // Enviará 0 - 1000 hacia Factory IO (Scale = 100)
 }
 
 void loop() {
@@ -59,7 +61,7 @@ void loop() {
   bool botonFisico   = (digitalRead(PIN_BOTON_FISICO) == LOW);
 
   digitalWrite(PIN_LED_DIGITAL, sensorVirtual ? HIGH : LOW);
-  mb.Ists(ISTS_ACTUADOR_DIG, (sensorVirtual || botonFisico));
+  mb.Ists(ISTS_ACTUADOR_DIG, botonFisico); // El actuador solo depende del pulsador (independiente del sensor)
 
   // ==========================================================
   // SECCIÓN B: POTENCIÓMETRO ESP32 -> FACTORY I/O (0.0V a 10.0V)

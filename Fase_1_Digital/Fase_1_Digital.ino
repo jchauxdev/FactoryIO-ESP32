@@ -7,7 +7,7 @@ const int COIL_SENSOR_FIO  = 0; // Factory IO escribe aquí el estado del Sensor
 const int ISTS_MOTOR_FIO   = 0; // Factory IO lee de aquí para mover la Banda (Input 0)
 
 // 2. Pines físicos del ESP32
-const int PIN_LED_ESTADO   = 2; // LED integrado en la placa ESP32
+const int PIN_LED_ESTADO   = 15; // LED integrado en la placa ESP32
 const int PIN_BOTON_MARCHA = 4; // Pulsador entre GPIO 4 y GND
 
 // Objeto Servidor Modbus TCP
@@ -34,8 +34,10 @@ void setup() {
   mb.server();
 
   // Dar de alta registros digitales en memoria
-  mb.addCoil(COIL_SENSOR_FIO, false); // Recibe sensor de Factory IO
-  mb.addIsts(ISTS_MOTOR_FIO, false);  // Envía mando de actuador a Factory IO
+  // Factory IO escribe/lee los 16 puntos digitales en una sola petición: hay que definirlos
+  // todos, o el ESP32 rechaza la escritura y el sensor nunca llega (Count = 16 en el driver).
+  mb.addCoil(COIL_SENSOR_FIO, false, 16); // Recibe sensor de Factory IO (Coil 0 a 15)
+  mb.addIsts(ISTS_MOTOR_FIO, false, 16);  // Envía mando de actuador a Factory IO (Input 0 a 15)
 }
 
 void loop() {
@@ -51,8 +53,8 @@ void loop() {
   // Reflejar sensor virtual en el LED físico del ESP32
   digitalWrite(PIN_LED_ESTADO, cajaDetectada ? HIGH : LOW);
 
-  // C) Lógica: Activar la banda si el sensor detecta caja O si se presiona el botón físico
-  if (cajaDetectada || botonPresionado) {
+  // C) Lógica independiente: la banda solo depende del pulsador físico (el sensor solo enciende el LED)
+  if (botonPresionado) {
     mb.Ists(ISTS_MOTOR_FIO, true);  // Enciende Output (Input 0) en Factory IO
   } else {
     mb.Ists(ISTS_MOTOR_FIO, false); // Apaga Output (Input 0) en Factory IO
